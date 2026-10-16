@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose an adapter, pipeline capability or backend integration change.
+title: "[Feature] "
+body:
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: Describe the workflow and a concrete example with synthetic data.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Explain the expected input/output and what existing behavior cannot support it.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Module and shared port
+      description: Identify the owning module, replacement contract and optional dependencies.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Index, authorization and deployment impact
+      description: Note reindexing, ACL/tenant behavior, schema changes, costs and how the feature could be disabled or removed.
