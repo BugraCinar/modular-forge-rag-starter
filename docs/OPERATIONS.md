@@ -1,5 +1,18 @@
 # Operations
 
+## Dependency maintenance
+
+Dependabot version-update configuration is intentionally absent, and automatic
+security-update pull requests are disabled in repository settings. Dependency
+changes are reviewed and applied manually. The scheduled dependency audit and
+CodeQL workflows continue to run independently of Dependabot.
+
+When changing Python dependencies, update and commit `uv.lock`, then run the
+verification and audit commands in [README](../README.md#modules-and-verification).
+For Docker or Maven updates, also run the container and backend integration
+checks. Compare the actual dependency changes and test current branches before
+merging; an old failed run may predate a fix already present on `main`.
+
 ## Local processes
 
 Run `forge-rag init-env`, then `forge-rag migrate`. Startup never auto-creates
