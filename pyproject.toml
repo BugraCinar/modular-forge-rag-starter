@@ -19,7 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 postgresql = ["psycopg[binary]>=3.2,<4", "pgvector>=0.4,<1"]
 pdf = ["pypdf>=6,<8"]
-dev = ["pytest>=8.3,<10", "pytest-cov>=6,<8", "ruff>=0.11,<1", "mypy>=1.15,<2", "pip-audit>=2.8,<3", "build>=1.2,<2"]
+dev = ["pytest>=8.3,<10", "pytest-cov>=6,<8", "ruff>=0.11,<1", "mypy>=1.15,<3", "pip-audit>=2.8,<3", "build>=1.2,<2"]
 
 [project.scripts]
 forge-rag = "forge_rag.cli:main"
