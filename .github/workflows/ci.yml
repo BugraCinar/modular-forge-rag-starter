@@ -107,5 +107,8 @@ jobs:
         run: uv run --frozen --all-extras --with 'modular-forge-fastapi @ git+https://github.com/BugraCinar/modular-forge-fastapi-starter.git@081edbed0d2faf80c0c8e395e19e5fa3317ef28f' python scripts/smoke_fastapi_backend.py
         env:
           PYTHONPATH: integrations/fastapi
+      - name: Container diagnostics on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 100
       - if: always()
         run: docker compose down -v
