@@ -1,0 +1,13 @@
+{
+  "documents": [
+    {"external_id":"returns","title":"Returns policy","content":"Returns are accepted within 30 days. Keep your receipt for a return."},
+    {"external_id":"shipping","title":"Shipping policy","content":"Standard shipping takes 3 business days. Express shipping takes 1 business day."},
+    {"external_id":"indexing","title":"Index maintenance","content":"Changing the embedding model requires reindexing every document. The query and worker must use the same pipeline signature."}
+  ],
+  "cases": [
+    {"question":"What is the returns policy?","expected":"returns","answer_contains":"30 days"},
+    {"question":"How long does standard shipping take?","expected":"shipping","answer_contains":"3 business days"},
+    {"question":"What requires reindexing?","expected":"indexing","answer_contains":"embedding model"},
+    {"question":"galaxy velocity astrophysics","expected":null,"answer_contains":null}
+  ]
+}

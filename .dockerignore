@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.env.*
+data
+dist
+integrations
+tests
+docs
+scripts
+**/__pycache__
+.*_cache
+*.db*

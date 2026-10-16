@@ -1,0 +1,84 @@
+name: modular-forge-rag
+x-rag-env: &rag-env
+  DATABASE_URL: postgresql+psycopg://forge:${POSTGRES_PASSWORD:?Run forge-rag init-env first}@postgres:5432/forge_rag
+  DELEGATION_KEYS: ${DELEGATION_KEYS:?Run forge-rag init-env first}
+  DELEGATION_AUDIENCE: ${DELEGATION_AUDIENCE:-modular-forge-rag}
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  ALLOWED_HOSTS: '["localhost","127.0.0.1","rag-api"]'
+  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hash}
+  EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+  EMBEDDING_REVISION: ${EMBEDDING_REVISION:-1}
+  EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-256}
+  GENERATION_PROVIDER: ${GENERATION_PROVIDER:-extractive}
+  GENERATION_MODEL: ${GENERATION_MODEL:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+  PROVIDER_TIMEOUT_SECONDS: ${PROVIDER_TIMEOUT_SECONDS:-30}
+  MODULE_INGESTION_ENABLED: ${MODULE_INGESTION_ENABLED:-true}
+  MODULE_PDF_ENABLED: ${MODULE_PDF_ENABLED:-false}
+  MODULE_RERANKING_ENABLED: ${MODULE_RERANKING_ENABLED:-false}
+  MODULE_EVALUATION_ENABLED: ${MODULE_EVALUATION_ENABLED:-true}
+  MODULE_TELEMETRY_ENABLED: ${MODULE_TELEMETRY_ENABLED:-true}
+  MODULE_API_DOCS_ENABLED: "false"
+  CHUNK_CHARS: ${CHUNK_CHARS:-1000}
+  CHUNK_OVERLAP: ${CHUNK_OVERLAP:-120}
+  MAX_DOCUMENT_BYTES: ${MAX_DOCUMENT_BYTES:-1000000}
+  MAX_CHUNKS: ${MAX_CHUNKS:-256}
+  MAX_CONTEXT_CHARS: ${MAX_CONTEXT_CHARS:-8000}
+  MIN_SIMILARITY: ${MIN_SIMILARITY:-0.3}
+  CANDIDATE_LIMIT: ${CANDIDATE_LIMIT:-50}
+  JOB_LEASE_SECONDS: ${JOB_LEASE_SECONDS:-300}
+  JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-3}
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: forge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run forge-rag init-env first}
+      POSTGRES_DB: forge_rag
+    volumes: [rag-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U forge -d forge_rag"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  migrate:
+    build: .
+    image: modular-forge-rag:local
+    environment: *rag-env
+    command: [forge-rag, migrate]
+    depends_on:
+      postgres: {condition: service_healthy}
+  rag-api:
+    image: modular-forge-rag:local
+    environment: *rag-env
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["127.0.0.1:8090:8090"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  rag-worker:
+    image: modular-forge-rag:local
+    environment: *rag-env
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    command: [forge-rag, worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 1g
+    cpus: 1.0
+volumes:
+  rag-db:

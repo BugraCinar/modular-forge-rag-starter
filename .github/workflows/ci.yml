@@ -1,0 +1,111 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+          enable-cache: true
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen --all-extras ruff check .
+      - run: uv run --frozen --all-extras ruff format --check .
+      - run: uv run --frozen --all-extras mypy src
+      - run: uv run --frozen --all-extras pytest --cov=forge_rag --cov-report=term-missing
+      - run: uv run --frozen --all-extras python -c "from forge_rag.evaluation.runner import evaluate; print(evaluate())"
+
+  postgresql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: forge
+          POSTGRES_PASSWORD: contract-only-password
+          POSTGRES_DB: forge_contract
+        ports: ["15432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U forge -d forge_contract"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+          python-version: "3.13"
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen --all-extras pytest tests/test_postgresql.py -q
+        env:
+          CONTRACT_DATABASE_URL: postgresql+psycopg://forge:contract-only-password@localhost:15432/forge_contract
+
+  spring-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: integrations/spring-boot/pom.xml
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+          python-version: "3.13"
+      - run: uv sync --frozen --all-extras
+      - run: ./mvnw --batch-mode clean verify
+        working-directory: integrations/spring-boot
+      - run: uv run --frozen --all-extras python scripts/check_java_delegation.py
+
+  package-and-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+          python-version: "3.13"
+      - run: uv sync --frozen --all-extras
+      - run: uv run --frozen --all-extras python -m build
+      - run: uv run --frozen --all-extras python -m build integrations/fastapi --outdir dist
+      - name: Installed wheel smoke
+        run: |
+          uv venv "$RUNNER_TEMP/rag-package" --python 3.13
+          uv pip install --python "$RUNNER_TEMP/rag-package/bin/python" dist/*.whl
+          mkdir "$RUNNER_TEMP/rag-smoke"
+          cd "$RUNNER_TEMP/rag-smoke"
+          "$RUNNER_TEMP/rag-package/bin/forge-rag" init-env
+          "$RUNNER_TEMP/rag-package/bin/forge-rag" migrate
+          "$RUNNER_TEMP/rag-package/bin/forge-rag" demo
+          "$RUNNER_TEMP/rag-package/bin/forge-rag" evaluate
+      - run: docker build -t modular-forge-rag:ci .
+      - name: Compose end-to-end smoke
+        run: |
+          uv run --frozen --all-extras forge-rag init-env
+          docker compose config --quiet
+          docker compose up --build -d rag-api rag-worker
+          uv run --frozen --all-extras python scripts/smoke_http.py
+      - name: Real FastAPI backend login and delegation
+        run: uv run --frozen --all-extras --with 'modular-forge-fastapi @ git+https://github.com/BugraCinar/modular-forge-fastapi-starter.git@081edbed0d2faf80c0c8e395e19e5fa3317ef28f' python scripts/smoke_fastapi_backend.py
+        env:
+          PYTHONPATH: integrations/fastapi
+      - if: always()
+        run: docker compose down -v
