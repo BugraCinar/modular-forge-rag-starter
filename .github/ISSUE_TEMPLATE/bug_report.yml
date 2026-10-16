@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible ingestion, retrieval or integration problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: Use synthetic documents and identities. Omit prompts, customer data, keys, tokens and private configuration. Report security vulnerabilities privately.
+  - type: input
+    id: revision
+    attributes:
+      label: Version or commit
+      placeholder: v1.0.0 or the output of git rev-parse HEAD
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Runtime and selected adapters
+      placeholder: Python 3.14, PostgreSQL, hash/extractive, FastAPI gateway
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include synthetic input, module toggles and worker/API steps. State whether the issue reproduces with offline providers.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Include request ID, HTTP error code and job status/error_code when relevant. Do not paste full provider responses.

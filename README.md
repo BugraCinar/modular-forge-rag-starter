@@ -117,3 +117,12 @@ uv run --frozen --all-extras python -m build
 
 CI also runs real PostgreSQL/pgvector contracts, Java integration tests, installed
 wheel smoke tests and Docker builds. CC0-1.0, consistent with the sibling starters.
+
+## Development guides
+
+- [Contributing and compatibility rules](CONTRIBUTING.md)
+- [Windows and PowerShell setup](docs/WINDOWS.md)
+- [Troubleshooting errors and missing answers](docs/TROUBLESHOOTING.md)
+- [Evaluation metrics and domain-specific datasets](docs/EVALUATION.md)
+- [Backend integration checks](docs/INTEGRATION_TESTING.md)
+- [Model changes and reindex rollout](docs/MODEL_CHANGES.md)
